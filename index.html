@@ -1,1 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mundo dos Planejados - Dashboard</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  padding: 20px;
+}
+.container {
+  max-width: 1000px;
+  margin: auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+h1, h2 {
+  color: #333;
+}
+.card {
+  background: #f9f9f9;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 5px;
+}
+.resumo {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.box {
+  background: #fff;
+  padding: 15px;
+  border-radius: 5px;
+  width: 30%;
+  text-align: center;
+}
+.lucro { color: green; font-weight: bold; }
+.prejuizo { color: red; font-weight: bold; }
+canvas { max-width: 100%; }
+</style>
+</head>
+
+<body>
+
+<!-- 🔒 BLOQUEIO POR SENHA -->
+<script>
+  const SENHA_CORRETA = "1234"; // <<< TROQUE AQUI
+
+  const senha = prompt("Área restrita - Digite a senha:");
+
+  if (senha !== SENHA_CORRETA) {
+    document.body.innerHTML = `
+      <div style="text-align:center;margin-top:100px">
+        <h2>Acesso negado</h2>
+        <p>Senha incorreta</p>
+      </div>
+    `;
+    throw new Error("Acesso bloqueado");
+  }
+</script>
+
+<div class="container">
+<h1>Mundo dos Planejados</h1>
+<h2>Dashboard Financeiro</h2>
+
+<div class="card resumo">
+  <div class="box">
+    <h3>Faturamento</h3>
+    <p>R$ <span id="fatTotal">0</span></p>
+  </div>
+  <div class="box">
+    <h3>Custos</h3>
+    <p>R$ <span id="custosTotal">0</span></p>
+  </div>
+  <div class="box">
+    <h3>Lucro</h3>
+    <p id="lucroTotal" class="lucro">R$ 0</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Faturamento por Mês</h3>
+  <canvas id="graficoFaturamento"></canvas>
+</div>
+
+<div class="card">
+  <h3>Lucro por Mês</h3>
+  <canvas id="graficoLucro"></canvas>
+</div>
+</div>
+
+<script>
+const projetos = JSON.parse(localStorage.getItem("projetosMensais")) || [];
+
+let dadosMes = {};
+
+projetos.forEach(p => {
+  const chave = `${p.mes}/${p.ano}`;
+  if (!dadosMes[chave]) {
+    dadosMes[chave] = { vendas: 0, custos: 0 };
+  }
+  const custo = p.material + p.maoObra + p.outros;
+  dadosMes[chave].vendas += p.venda;
+  dadosMes[chave].custos += custo;
+});
+
+const labels = Object.keys(dadosMes);
+const faturamento = labels.map(l => dadosMes[l].vendas);
+const lucro = labels.map(l => dadosMes[l].vendas - dadosMes[l].custos);
+
+const totalFat = faturamento.reduce((a,b)=>a+b,0);
+const totalCustos = labels.reduce((a,l)=>a+dadosMes[l].custos,0);
+const totalLucro = totalFat - totalCustos;
+
+document.getElementById("fatTotal").innerText = totalFat.toFixed(2);
+document.getElementById("custosTotal").innerText = totalCustos.toFixed(2);
+
+const lucroEl = document.getElementById("lucroTotal");
+lucroEl.innerText = "R$ " + totalLucro.toFixed(2);
+lucroEl.className = totalLucro >= 0 ? "lucro" : "prejuizo";
+
+new Chart(document.getElementById("graficoFaturamento"), {
+  type: "bar",
+  data: {
+    labels,
+    datasets: [{
+      label: "Faturamento",
+      data: faturamento
+    }]
+  }
+});
+
+new Chart(document.getElementById("graficoLucro"), {
+  type: "line",
+  data: {
+    labels,
+    datasets: [{
+      label: "Lucro",
+      data: lucro
+    }]
+  }
+});
+</script>
+
+</body>
+</html>
