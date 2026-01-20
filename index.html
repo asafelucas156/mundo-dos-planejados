@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Mundo dos Planejados - Dashboard</title>
+<title>Mundo dos Planejados - Controle Completo</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -19,8 +19,22 @@ body {
   padding: 20px;
   border-radius: 8px;
 }
-h1, h2 {
+h1, h2, h3 {
   color: #333;
+}
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+}
+button {
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:hover {
+  background: #0056b3;
 }
 .card {
   background: #f9f9f9;
@@ -50,25 +64,52 @@ canvas { max-width: 100%; }
 
 <!-- 🔒 BLOQUEIO POR SENHA -->
 <script>
-  const SENHA_CORRETA = "1234"; // <<< TROQUE AQUI
+const SENHA_CORRETA = "1234"; // <<< MUDE AQUI
 
-  const senha = prompt("Área restrita - Digite a senha:");
+const senha = prompt("Área restrita - Digite a senha:");
 
-  if (senha !== SENHA_CORRETA) {
-    document.body.innerHTML = `
-      <div style="text-align:center;margin-top:100px">
-        <h2>Acesso negado</h2>
-        <p>Senha incorreta</p>
-      </div>
-    `;
-    throw new Error("Acesso bloqueado");
-  }
+if (senha !== SENHA_CORRETA) {
+  document.body.innerHTML = "<h2 style='text-align:center;margin-top:100px'>Acesso negado</h2>";
+  throw new Error("Bloqueado");
+}
 </script>
 
 <div class="container">
 <h1>Mundo dos Planejados</h1>
-<h2>Dashboard Financeiro</h2>
+<h2>Controle Financeiro Completo</h2>
 
+<!-- ✍️ ANOTAÇÃO -->
+<div class="card">
+<h3>Novo Projeto</h3>
+
+<input type="text" id="cliente" placeholder="Nome do cliente">
+
+<select id="mes">
+  <option value="">Mês</option>
+  <option value="01">Janeiro</option>
+  <option value="02">Fevereiro</option>
+  <option value="03">Março</option>
+  <option value="04">Abril</option>
+  <option value="05">Maio</option>
+  <option value="06">Junho</option>
+  <option value="07">Julho</option>
+  <option value="08">Agosto</option>
+  <option value="09">Setembro</option>
+  <option value="10">Outubro</option>
+  <option value="11">Novembro</option>
+  <option value="12">Dezembro</option>
+</select>
+
+<input type="number" id="ano" placeholder="Ano" value="2026">
+<input type="number" id="venda" placeholder="Valor da venda (R$)">
+<input type="number" id="material" placeholder="Custo material (R$)">
+<input type="number" id="maoObra" placeholder="Custo mão de obra (R$)">
+<input type="number" id="outros" placeholder="Outros custos (R$)">
+
+<button onclick="adicionarProjeto()">Adicionar Projeto</button>
+</div>
+
+<!-- 📊 RESUMO -->
 <div class="card resumo">
   <div class="box">
     <h3>Faturamento</h3>
@@ -84,6 +125,7 @@ canvas { max-width: 100%; }
   </div>
 </div>
 
+<!-- 📈 GRÁFICOS -->
 <div class="card">
   <h3>Faturamento por Mês</h3>
   <canvas id="graficoFaturamento"></canvas>
@@ -96,56 +138,82 @@ canvas { max-width: 100%; }
 </div>
 
 <script>
-const projetos = JSON.parse(localStorage.getItem("projetosMensais")) || [];
+let projetos = JSON.parse(localStorage.getItem("projetosMensais")) || [];
 
-let dadosMes = {};
+let graficoFat, graficoLuc;
 
-projetos.forEach(p => {
-  const chave = `${p.mes}/${p.ano}`;
-  if (!dadosMes[chave]) {
-    dadosMes[chave] = { vendas: 0, custos: 0 };
+function adicionarProjeto() {
+  const cliente = clienteEl.value;
+  const mes = mesEl.value;
+  const ano = anoEl.value;
+  const venda = Number(vendaEl.value);
+  const material = Number(materialEl.value);
+  const maoObra = Number(maoObraEl.value);
+  const outros = Number(outrosEl.value);
+
+  if (!cliente || !mes || !ano || !venda) {
+    alert("Preencha cliente, mês, ano e venda");
+    return;
   }
-  const custo = p.material + p.maoObra + p.outros;
-  dadosMes[chave].vendas += p.venda;
-  dadosMes[chave].custos += custo;
-});
 
-const labels = Object.keys(dadosMes);
-const faturamento = labels.map(l => dadosMes[l].vendas);
-const lucro = labels.map(l => dadosMes[l].vendas - dadosMes[l].custos);
+  projetos.push({ cliente, mes, ano, venda, material, maoObra, outros });
+  localStorage.setItem("projetosMensais", JSON.stringify(projetos));
 
-const totalFat = faturamento.reduce((a,b)=>a+b,0);
-const totalCustos = labels.reduce((a,l)=>a+dadosMes[l].custos,0);
-const totalLucro = totalFat - totalCustos;
+  limpar();
+  atualizarDashboard();
+}
 
-document.getElementById("fatTotal").innerText = totalFat.toFixed(2);
-document.getElementById("custosTotal").innerText = totalCustos.toFixed(2);
+function limpar() {
+  clienteEl.value = vendaEl.value = materialEl.value = maoObraEl.value = outrosEl.value = "";
+}
 
-const lucroEl = document.getElementById("lucroTotal");
-lucroEl.innerText = "R$ " + totalLucro.toFixed(2);
-lucroEl.className = totalLucro >= 0 ? "lucro" : "prejuizo";
+function atualizarDashboard() {
+  let dados = {};
+  let totalFat = 0;
+  let totalCustos = 0;
 
-new Chart(document.getElementById("graficoFaturamento"), {
-  type: "bar",
-  data: {
-    labels,
-    datasets: [{
-      label: "Faturamento",
-      data: faturamento
-    }]
-  }
-});
+  projetos.forEach(p => {
+    const chave = `${p.mes}/${p.ano}`;
+    if (!dados[chave]) dados[chave] = { vendas: 0, custos: 0 };
+    const custo = p.material + p.maoObra + p.outros;
+    dados[chave].vendas += p.venda;
+    dados[chave].custos += custo;
+    totalFat += p.venda;
+    totalCustos += custo;
+  });
 
-new Chart(document.getElementById("graficoLucro"), {
-  type: "line",
-  data: {
-    labels,
-    datasets: [{
-      label: "Lucro",
-      data: lucro
-    }]
-  }
-});
+  const labels = Object.keys(dados);
+  const faturamento = labels.map(l => dados[l].vendas);
+  const lucro = labels.map(l => dados[l].vendas - dados[l].custos);
+
+  fatTotal.innerText = totalFat.toFixed(2);
+  custosTotal.innerText = totalCustos.toFixed(2);
+  lucroTotal.innerText = "R$ " + (totalFat - totalCustos).toFixed(2);
+  lucroTotal.className = totalFat - totalCustos >= 0 ? "lucro" : "prejuizo";
+
+  if (graficoFat) graficoFat.destroy();
+  if (graficoLuc) graficoLuc.destroy();
+
+  graficoFat = new Chart(graficoFaturamento, {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Faturamento", data: faturamento }] }
+  });
+
+  graficoLuc = new Chart(graficoLucro, {
+    type: "line",
+    data: { labels, datasets: [{ label: "Lucro", data: lucro }] }
+  });
+}
+
+const clienteEl = document.getElementById("cliente");
+const mesEl = document.getElementById("mes");
+const anoEl = document.getElementById("ano");
+const vendaEl = document.getElementById("venda");
+const materialEl = document.getElementById("material");
+const maoObraEl = document.getElementById("maoObra");
+const outrosEl = document.getElementById("outros");
+
+atualizarDashboard();
 </script>
 
 </body>
