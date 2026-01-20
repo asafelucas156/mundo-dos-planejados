@@ -2,70 +2,89 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Mundo dos Planejados - Controle Completo</title>
+<title>Mundo dos Planejados - Sistema Financeiro</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: #f2f2f2;
+  background: #ececec;
   padding: 20px;
 }
 .container {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: auto;
   background: #fff;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 h1, h2, h3 {
-  color: #333;
+  color: #222;
 }
 input, select, button {
   width: 100%;
   padding: 10px;
-  margin: 5px 0;
+  margin: 6px 0;
 }
 button {
   background: #007bff;
-  color: white;
+  color: #fff;
   border: none;
   cursor: pointer;
+  border-radius: 4px;
 }
 button:hover {
   background: #0056b3;
 }
 .card {
-  background: #f9f9f9;
+  background: #f8f8f8;
   padding: 15px;
   margin-top: 15px;
-  border-radius: 5px;
+  border-radius: 8px;
 }
 .resumo {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .box {
+  flex: 1;
   background: #fff;
   padding: 15px;
-  border-radius: 5px;
-  width: 30%;
+  border-radius: 8px;
   text-align: center;
 }
 .lucro { color: green; font-weight: bold; }
 .prejuizo { color: red; font-weight: bold; }
-canvas { max-width: 100%; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+th {
+  background: #007bff;
+  color: #fff;
+}
+.excluir {
+  background: #dc3545;
+}
+.excluir:hover {
+  background: #b52a37;
+}
 </style>
 </head>
 
 <body>
 
-<!-- 🔒 BLOQUEIO POR SENHA -->
+<!-- 🔒 SENHA -->
 <script>
 const SENHA_CORRETA = "1234"; // <<< MUDE AQUI
-
 const senha = prompt("Área restrita - Digite a senha:");
 
 if (senha !== SENHA_CORRETA) {
@@ -76,13 +95,13 @@ if (senha !== SENHA_CORRETA) {
 
 <div class="container">
 <h1>Mundo dos Planejados</h1>
-<h2>Controle Financeiro Completo</h2>
+<h2>Controle Financeiro Detalhado</h2>
 
-<!-- ✍️ ANOTAÇÃO -->
+<!-- ✍️ CADASTRO -->
 <div class="card">
 <h3>Novo Projeto</h3>
 
-<input type="text" id="cliente" placeholder="Nome do cliente">
+<input id="cliente" placeholder="Nome do cliente">
 
 <select id="mes">
   <option value="">Mês</option>
@@ -100,120 +119,143 @@ if (senha !== SENHA_CORRETA) {
   <option value="12">Dezembro</option>
 </select>
 
-<input type="number" id="ano" placeholder="Ano" value="2026">
-<input type="number" id="venda" placeholder="Valor da venda (R$)">
-<input type="number" id="material" placeholder="Custo material (R$)">
-<input type="number" id="maoObra" placeholder="Custo mão de obra (R$)">
-<input type="number" id="outros" placeholder="Outros custos (R$)">
+<input id="ano" type="number" value="2026" placeholder="Ano">
+<input id="venda" type="number" placeholder="Valor da venda">
+<input id="material" type="number" placeholder="Custo material">
+<input id="maoObra" type="number" placeholder="Custo mão de obra">
+<input id="outros" type="number" placeholder="Outros custos">
 
-<button onclick="adicionarProjeto()">Adicionar Projeto</button>
+<button onclick="adicionar()">Adicionar Projeto</button>
 </div>
 
 <!-- 📊 RESUMO -->
 <div class="card resumo">
   <div class="box">
     <h3>Faturamento</h3>
-    <p>R$ <span id="fatTotal">0</span></p>
+    <p>R$ <span id="fat">0</span></p>
   </div>
   <div class="box">
     <h3>Custos</h3>
-    <p>R$ <span id="custosTotal">0</span></p>
+    <p>R$ <span id="custos">0</span></p>
   </div>
   <div class="box">
     <h3>Lucro</h3>
-    <p id="lucroTotal" class="lucro">R$ 0</p>
+    <p id="lucro" class="lucro">R$ 0</p>
   </div>
+</div>
+
+<!-- 📋 LISTA -->
+<div class="card">
+<h3>Projetos Cadastrados</h3>
+<table>
+<thead>
+<tr>
+<th>Cliente</th>
+<th>Mês/Ano</th>
+<th>Venda</th>
+<th>Material</th>
+<th>Mão de obra</th>
+<th>Outros</th>
+<th>Lucro</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody id="lista"></tbody>
+</table>
 </div>
 
 <!-- 📈 GRÁFICOS -->
 <div class="card">
-  <h3>Faturamento por Mês</h3>
-  <canvas id="graficoFaturamento"></canvas>
+<h3>Faturamento por Mês</h3>
+<canvas id="grafFat"></canvas>
 </div>
 
 <div class="card">
-  <h3>Lucro por Mês</h3>
-  <canvas id="graficoLucro"></canvas>
+<h3>Lucro por Mês</h3>
+<canvas id="grafLuc"></canvas>
 </div>
+
 </div>
 
 <script>
-let projetos = JSON.parse(localStorage.getItem("projetosMensais")) || [];
+let projetos = JSON.parse(localStorage.getItem("projetosDetalhados")) || [];
+let gFat, gLuc;
 
-let graficoFat, graficoLuc;
+function adicionar() {
+  const p = {
+    cliente: cliente.value,
+    mes: mes.value,
+    ano: ano.value,
+    venda: +venda.value,
+    material: +material.value,
+    maoObra: +maoObra.value,
+    outros: +outros.value
+  };
 
-function adicionarProjeto() {
-  const cliente = clienteEl.value;
-  const mes = mesEl.value;
-  const ano = anoEl.value;
-  const venda = Number(vendaEl.value);
-  const material = Number(materialEl.value);
-  const maoObra = Number(maoObraEl.value);
-  const outros = Number(outrosEl.value);
-
-  if (!cliente || !mes || !ano || !venda) {
-    alert("Preencha cliente, mês, ano e venda");
+  if (!p.cliente || !p.mes || !p.venda) {
+    alert("Preencha cliente, mês e venda");
     return;
   }
 
-  projetos.push({ cliente, mes, ano, venda, material, maoObra, outros });
-  localStorage.setItem("projetosMensais", JSON.stringify(projetos));
-
-  limpar();
-  atualizarDashboard();
+  projetos.push(p);
+  salvar();
 }
 
-function limpar() {
-  clienteEl.value = vendaEl.value = materialEl.value = maoObraEl.value = outrosEl.value = "";
+function excluir(i) {
+  projetos.splice(i, 1);
+  salvar();
 }
 
-function atualizarDashboard() {
-  let dados = {};
-  let totalFat = 0;
-  let totalCustos = 0;
+function salvar() {
+  localStorage.setItem("projetosDetalhados", JSON.stringify(projetos));
+  atualizar();
+}
 
-  projetos.forEach(p => {
-    const chave = `${p.mes}/${p.ano}`;
-    if (!dados[chave]) dados[chave] = { vendas: 0, custos: 0 };
+function atualizar() {
+  lista.innerHTML = "";
+  let dados = {}, fatTotal = 0, custoTotal = 0;
+
+  projetos.forEach((p, i) => {
     const custo = p.material + p.maoObra + p.outros;
-    dados[chave].vendas += p.venda;
-    dados[chave].custos += custo;
-    totalFat += p.venda;
-    totalCustos += custo;
+    const lucro = p.venda - custo;
+
+    fatTotal += p.venda;
+    custoTotal += custo;
+
+    const chave = `${p.mes}/${p.ano}`;
+    if (!dados[chave]) dados[chave] = { v: 0, l: 0 };
+    dados[chave].v += p.venda;
+    dados[chave].l += lucro;
+
+    lista.innerHTML += `
+      <tr>
+        <td>${p.cliente}</td>
+        <td>${p.mes}/${p.ano}</td>
+        <td>R$ ${p.venda.toFixed(2)}</td>
+        <td>R$ ${p.material.toFixed(2)}</td>
+        <td>R$ ${p.maoObra.toFixed(2)}</td>
+        <td>R$ ${p.outros.toFixed(2)}</td>
+        <td class="${lucro>=0?'lucro':'prejuizo'}">R$ ${lucro.toFixed(2)}</td>
+        <td><button class="excluir" onclick="excluir(${i})">Excluir</button></td>
+      </tr>`;
   });
+
+  fat.innerText = fatTotal.toFixed(2);
+  custos.innerText = custoTotal.toFixed(2);
+  lucro.innerText = "R$ " + (fatTotal - custoTotal).toFixed(2);
 
   const labels = Object.keys(dados);
-  const faturamento = labels.map(l => dados[l].vendas);
-  const lucro = labels.map(l => dados[l].vendas - dados[l].custos);
+  const fatMes = labels.map(l => dados[l].v);
+  const lucMes = labels.map(l => dados[l].l);
 
-  fatTotal.innerText = totalFat.toFixed(2);
-  custosTotal.innerText = totalCustos.toFixed(2);
-  lucroTotal.innerText = "R$ " + (totalFat - totalCustos).toFixed(2);
-  lucroTotal.className = totalFat - totalCustos >= 0 ? "lucro" : "prejuizo";
+  if (gFat) gFat.destroy();
+  if (gLuc) gLuc.destroy();
 
-  if (graficoFat) graficoFat.destroy();
-  if (graficoLuc) graficoLuc.destroy();
-
-  graficoFat = new Chart(graficoFaturamento, {
-    type: "bar",
-    data: { labels, datasets: [{ label: "Faturamento", data: faturamento }] }
-  });
-
-  graficoLuc = new Chart(graficoLucro, {
-    type: "line",
-    data: { labels, datasets: [{ label: "Lucro", data: lucro }] }
-  });
+  gFat = new Chart(grafFat, { type: "bar", data: { labels, datasets: [{ label: "Faturamento", data: fatMes }] }});
+  gLuc = new Chart(grafLuc, { type: "line", data: { labels, datasets: [{ label: "Lucro", data: lucMes }] }});
 }
 
-const clienteEl = document.getElementById("cliente");
-const mesEl = document.getElementById("mes");
-const anoEl = document.getElementById("ano");
-const vendaEl = document.getElementById("venda");
-const materialEl = document.getElementById("material");
-const maoObraEl = document.getElementById("maoObra");
-const outrosEl = document.getElementById("outros");
-
-atualizarDashboard();
+atualizar();
 </script>
 
 </body>
